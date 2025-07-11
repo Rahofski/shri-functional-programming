@@ -1,51 +1,67 @@
-/**
- * @file Домашка по FP ч. 2
- *
- * Подсказки:
- * Метод get у инстанса Api – каррированый
- * GET / https://animals.tech/{id}
- *
- * GET / https://api.tech/numbers/base
- * params:
- * – number [Int] – число
- * – from [Int] – из какой системы счисления
- * – to [Int] – в какую систему счисления
- *
- * Иногда промисы от API будут приходить в состояние rejected, (прямо как и API в реальной жизни)
- * Ответ будет приходить в поле {result}
- */
- import Api from '../tools/api';
+import Api from '../tools/api';
+import {
+  allPass, test, tap, ifElse, compose,
+  andThen, otherwise, pipe, prop
+} from 'ramda';
 
- const api = new Api();
+const api = new Api();
 
- /**
-  * Я – пример, удали меня
-  */
- const wait = time => new Promise(resolve => {
-     setTimeout(resolve, time);
- })
+const square = num => num * num;
+const remainder = num => num % 3;
 
- const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
-     /**
-      * Я – пример, удали меня
-      */
-     writeLog(value);
+const numberUrl = 'https://api.tech/numbers/base';
+const animalUrl = 'https://animals.tech/';
 
-     api.get('https://api.tech/numbers/base', {from: 2, to: 10, number: '01011010101'}).then(({result}) => {
-         writeLog(result);
-     });
+const lengthGreaterThanTwo = str => str.length > 2;
+const lengthLessThanTen = str => str.length < 10;
+const isNumericWithDot = test(/^[0-9.]+$/);
 
-     wait(2500).then(() => {
-         writeLog('SecondLog')
+const validate = allPass([
+  lengthGreaterThanTwo,
+  lengthLessThanTen,
+  isNumericWithDot
+]);
 
-         return wait(1500);
-     }).then(() => {
-         writeLog('ThirdLog');
+const getBinary = query => api.get(numberUrl)(query);
 
-         return wait(400);
-     }).then(() => {
-         handleSuccess('Done');
-     });
- }
+const getAnimal = id => api.get(animalUrl)(id)
+
+const roundToNumber = compose(Math.round, Number);
+const makeQuery = value => ({ from: 10, to: 2, number: value });
+
+const processSequence = ({ value, writeLog, handleSuccess, handleError }) => {
+  const log = tap(writeLog);
+
+  const onError = () => handleError('ValidationError');
+
+  const process = pipe(
+  log,
+  roundToNumber,
+  log,
+  makeQuery,
+  getBinary,
+  andThen(pipe(
+    prop('result'),        // binary result
+    log,
+    String,
+    str => str.length,
+    log,
+    square,
+    log,
+    remainder,
+    log,
+    getAnimal  // ← возвращаем Promise
+  )),
+  andThen(pipe(
+    prop('result'),
+    handleSuccess
+  )),
+  otherwise(handleError)
+);
+
+
+  const run = ifElse(validate, process, onError);
+  run(value);
+};
 
 export default processSequence;

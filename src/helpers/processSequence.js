@@ -14,7 +14,8 @@ const animalUrl = 'https://animals.tech/';
 
 const lengthGreaterThanTwo = str => str.length > 2;
 const lengthLessThanTen = str => str.length < 10;
-const isNumericWithDot = test(/^[0-9.]+$/);
+const isNumericWithDot = test(/^\d+(\.\d+)?$/);
+
 
 const validate = allPass([
   lengthGreaterThanTwo,
@@ -24,7 +25,7 @@ const validate = allPass([
 
 const getBinary = query => api.get(numberUrl)(query);
 
-const getAnimal = id => api.get(animalUrl)(id)
+const getAnimal = id => api.get(`${animalUrl}${id}`)({})
 
 const roundToNumber = compose(Math.round, Number);
 const makeQuery = value => ({ from: 10, to: 2, number: value });
